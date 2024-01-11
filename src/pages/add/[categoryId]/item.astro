@@ -1,0 +1,33 @@
+---
+export const partial = true;
+
+const categoryId = Astro.request.url.split("/")[4];
+---
+
+<form method="POST" id="categoryFrom" class="space-y-1 mt-2">
+  <input
+    type="text"
+    name="categoryId"
+    id="categoryId"
+    value={`${categoryId}`}
+    hidden
+  />
+  <div class="flex space-x-4">
+    <label for="name" class="p-1 font-bold w-20">Name</label>
+    <input
+      type="text"
+      name="name"
+      id="name"
+      class="p-1 focus:outline-none border-2 border-zinc-700"
+      hx-post="/validate/name"
+      hx-target="#name-error"
+    />
+  </div>
+  <div id="name-error" class="p-1"></div>
+  <button
+    type="submit"
+    hx-post="/addCategory"
+    hx-target="#categoryFrom"
+    class="px-2 py-1 bg-black text-white">Submit</button
+  >
+</form>

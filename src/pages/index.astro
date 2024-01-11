@@ -1,0 +1,98 @@
+---
+import sql, { prisma } from "../lib/db";
+
+const year = new Date().getFullYear();
+const month = new Date().getMonth() + 1;
+
+const date = year + "-" + month.toString().padStart(2, "0") + "-" + "01";
+
+const expenses = await prisma.expenses.groupBy({
+  by: ["categoryid"],
+  _sum: {
+    price: true,
+  },
+  where: {
+    purchasedate: {
+      gte: new Date(date),
+    },
+  },
+  orderBy: {
+    _sum: {
+      price: "desc",
+    },
+  },
+});
+
+const cats = await prisma.category.findMany();
+
+let categories = [];
+
+cats.map((cat) => {
+  categories.push({
+    id: cat.id,
+    name: cat.name,
+    total: expenses.filter((e) => e.categoryid === cat.id)[0]?._sum.price || 0,
+  });
+});
+
+let total = 0;
+
+categories.map((cat) => (total += parseInt(cat.total)));
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <script
+      src="https://unpkg.com/htmx.org@1.9.4"
+      integrity="sha384-zUfuhFKKZCbHTY6aRR46gxiqszMk5tcHjsVFxnUo8VMus4kHGVdIYVbOYYNlKmHV"
+      crossorigin="anonymous"></script>
+    <title>Expense Tracker</title>
+  </head>
+  <body>
+    <main id="home" class="container mx-auto font-mono">
+      <nav class="py-2 px-1 text-lg">
+        <ul class="flex space-x-8">
+          <li class="cursor-pointer" hx-get="/" hx-target="#home">Home</li>
+          <li class="cursor-pointer" hx-get="/categories" hx-target="#slot">
+            Categories
+          </li>
+        </ul>
+      </nav>
+      <h1 class="font-semibold text-center">Total - {total}</h1>
+      <div id="slot">
+        <div class="grid md:grid-cols-4 gap-4 mt-4">
+          {
+            categories?.map((cat) => (
+              <div class="bg-slate-200 mx-2 py-2 space-y-3 rounded-md">
+                <div class="flex justify-around items-center text-lg font-bold">
+                  <h1>{cat.name}</h1>
+                  <h1>{cat.total}</h1>
+                </div>
+                <div class="flex justify-evenly">
+                  <a
+                    class="bg-black text-white px-2 py-1 text-sm rounded-lg cursor-pointer"
+                    hx-get={`/view/${cat.id}/expenses`}
+                    hx-target="#slot"
+                  >
+                    View
+                  </a>
+                  <a
+                    class="bg-black text-white px-2 py-1 text-sm rounded-lg cursor-pointer"
+                    hx-get={`/add/${cat.id}/expense`}
+                    hx-target="#slot"
+                  >
+                    Add
+                  </a>
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

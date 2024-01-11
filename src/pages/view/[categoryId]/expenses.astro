@@ -1,0 +1,56 @@
+---
+import { prisma } from "../../../lib/db";
+
+export const partial = true;
+
+const categoryId = Astro.request.url.split("/")[4];
+
+const year = new Date().getFullYear();
+const month = new Date().getMonth() + 1;
+
+const date = year + "-" + month.toString().padStart(2, "0") + "-" + "01";
+
+const expenses = await prisma.expenses.findMany({
+  where: {
+    AND: {
+      categoryid: categoryId,
+      purchasedate: {
+        gte: new Date(date),
+      },
+    },
+  },
+  orderBy: {
+    purchasedate: "desc",
+  },
+  select: {
+    purchasedate: true,
+    name: true,
+    price: true,
+    quantity: true,
+  },
+});
+---
+
+{
+  expenses.length > 0 ? (
+    <table class="w-full mx-1">
+      <tr class="text-left">
+        <th>Purchase Date</th>
+        <th>Name</th>
+        <th>Price</th>
+        <th>Quantity</th>
+
+        {expenses?.map((e) => (
+          <tr>
+            <td>{e.purchasedate.toISOString().substring(0, 10)}</td>
+            <td>{e.name}</td>
+            <td>{e.price}</td>
+            <td>{e.quantity}</td>
+          </tr>
+        ))}
+      </tr>
+    </table>
+  ) : (
+    <p>No expenses for this month </p>
+  )
+}

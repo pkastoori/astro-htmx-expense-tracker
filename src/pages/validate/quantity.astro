@@ -1,0 +1,11 @@
+---
+let error = "";
+const data = await Astro.request.formData();
+const quantity = data.get("quantity") as string;
+
+if (quantity.length < 1) {
+  error = "Quantity cannot be blank";
+}
+---
+
+<p class="text-red-600">{error}</p>

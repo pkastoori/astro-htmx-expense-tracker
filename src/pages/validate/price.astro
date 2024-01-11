@@ -1,0 +1,11 @@
+---
+let error = "";
+const data = await Astro.request.formData();
+let price = parseInt(data.get("price") as string);
+
+if (price < 1) {
+  error = "Price cannot be 0";
+}
+---
+
+<p class="text-red-600">{error}</p>

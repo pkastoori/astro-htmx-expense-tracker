@@ -1,0 +1,89 @@
+---
+import { prisma } from "../lib/db";
+
+const categories = await prisma.category.findMany({
+  select: {
+    id: true,
+    name: true,
+  },
+  orderBy: {
+    name: "asc",
+  },
+});
+
+export const partial = true;
+---
+
+<div class="grid md:grid-cols-4 gap-4 mt-4">
+  {
+    categories?.map((cat) => (
+      <div class="bg-slate-200 mx-2 py-2 space-y-3 rounded-md">
+        <div class="flex justify-around items-center text-lg font-bold">
+          <h1>{cat.name}</h1>
+        </div>
+        <div class="flex justify-evenly">
+          <a
+            class="bg-black text-white px-2 py-1 text-sm rounded-lg cursor-pointer"
+            hx-get={`/view/${cat.id}/items`}
+            hx-target="#slot"
+          >
+            View
+          </a>
+          <a
+            class="bg-black text-white px-2 py-1 text-sm rounded-lg cursor-pointer"
+            hx-get={`/add/${cat.id}/item`}
+            hx-target="#slot"
+          >
+            Add
+          </a>
+        </div>
+      </div>
+    ))
+  }
+</div>
+
+<!-- <form method="POST" id="categoryForm" class="space-y-1 mt-2">
+  <div class="flex space-x-4">
+    <label for="name" class="p-1 font-bold w-20">Name</label>
+    <input
+      type="text"
+      name="name"
+      id="name"
+      class="p-1 focus:outline-none border-2 border-zinc-700"
+      hx-post="/validate/name"
+      hx-target="#name-error"
+    />
+  </div>
+  <div id="name-error" class="p-1"></div>
+  <div class="flex space-x-4">
+    <label for="age" class="p-1 font-bold w-20">Age</label>
+    <input
+      type="number"
+      step="0.1"
+      name="age"
+      id="age"
+      class="p-1 focus:outline-none border-2 border-zinc-700"
+      hx-post="/validate/age"
+      hx-target="#age-error"
+    />
+  </div>
+  <div id="age-error" class="p-1"></div>
+  <div class="flex space-x-4">
+    <label for="email" class="p-1 font-bold w-20">Email</label>
+    <input
+      type="text"
+      name="email"
+      id="email"
+      class="p-1 focus:outline-none border-2 border-zinc-700"
+      hx-post="/validate/email"
+      hx-target="#email-error"
+    />
+  </div>
+  <div id="email-error" class="p-1"></div>
+  <button
+    type="submit"
+    hx-post="/addCategory"
+    hx-target="#categoryForm"
+    class="px-2 py-1 bg-black text-white">Submit</button
+  >
+</form> -->

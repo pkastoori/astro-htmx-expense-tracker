@@ -1,0 +1,127 @@
+---
+import { z } from "zod";
+import { prisma } from "../lib/db";
+
+export const partial = true;
+
+let message = "";
+let success: boolean;
+let errors = [];
+let categoryId = "";
+
+const categorySchema = z.object({
+  categoryId: z.string(),
+  name: z.string().min(1, "Name cannot be blank"),
+});
+
+const data = Object.fromEntries(await Astro.request.formData());
+
+const result = categorySchema.safeParse(data);
+
+if (result.success === false) {
+  result.error.issues.map((issue) => {
+    errors.push({
+      name: issue?.path[0],
+      message: issue?.message,
+    });
+  });
+} else {
+  try {
+    categoryId = result.data.categoryId;
+    const itemName = result.data.name;
+
+    await prisma.items.create({
+      data: {
+        name: itemName,
+        categoryid: categoryId,
+      },
+    });
+
+    message = "Category added";
+    success = true;
+  } catch (error) {
+    console.log(error);
+    success = false;
+    message = "Error adding category";
+  }
+}
+---
+
+{
+  success ? (
+    <h1 class="p-1 font-semibold text-green-600 my-2 w-80">{message}</h1>
+  ) : (
+    errors.map((error) => (
+      <h1 class="p-1 text-red-600 my-2 w-80">{error.message}</h1>
+    ))
+  )
+}
+
+{
+  success ? (
+    <form method="POST" id="categoryFrom" class="space-y-1 mt-2">
+      <input
+        type="text"
+        name="categoryId"
+        id="categoryId"
+        value={`${categoryId}`}
+        hidden
+      />
+      <div class="flex space-x-4">
+        <label for="name" class="p-1 font-bold w-20">
+          Name
+        </label>
+        <input
+          type="text"
+          name="name"
+          id="name"
+          class="p-1 focus:outline-none border-2 border-zinc-700"
+          hx-post="/validate/name"
+          hx-target="#name-error"
+        />
+      </div>
+      <div id="name-error" class="p-1" />
+      <button
+        type="submit"
+        hx-post="/addCategory"
+        hx-target="#categoryFrom"
+        class="px-2 py-1 bg-black text-white"
+      >
+        Submit
+      </button>
+    </form>
+  ) : (
+    <form method="POST" id="categoryFrom" class="space-y-1 mt-2">
+      <input
+        type="text"
+        name="categoryId"
+        id="categoryId"
+        value={(data?.categoryId as string) || ""}
+        hidden
+      />
+      <div class="flex space-x-4">
+        <label for="name" class="p-1 font-bold w-20">
+          Name
+        </label>
+        <input
+          type="text"
+          name="name"
+          id="name"
+          class="p-1 focus:outline-none border-2 border-zinc-700"
+          hx-post="/validate/name"
+          hx-target="#name-error"
+          value={(data?.name as string) || ""}
+        />
+      </div>
+      <div id="name-error" class="p-1" />
+      <button
+        type="submit"
+        hx-post="/addCategory"
+        hx-target="#categoryFrom"
+        class="px-2 py-1 bg-black text-white"
+      >
+        Submit
+      </button>
+    </form>
+  )
+}

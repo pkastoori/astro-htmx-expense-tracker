@@ -1,0 +1,233 @@
+---
+import { z } from "zod";
+import { prisma } from "../lib/db";
+
+export const partial = true;
+
+let message = "";
+let success: boolean;
+let errors = [];
+let categoryId = "";
+
+const expenseSchema = z.object({
+  categoryId: z.string(),
+  name: z.string().min(1, "Name cannot be blank"),
+  quantity: z.string().min(1, "Quantity cannot be blank"),
+  price: z.coerce.number().min(1, "Price cannot be less than 1"),
+  comments: z.string().optional().default(""),
+});
+
+const data = Object.fromEntries(await Astro.request.formData());
+
+const result = expenseSchema.safeParse(data);
+
+let names: string[] = [];
+
+if (result.success === false) {
+  console.log(result.error);
+
+  result.error.issues.map((issue) => {
+    errors.push({
+      name: issue?.path[0],
+      message: issue?.message,
+    });
+  });
+} else {
+  console.log(result.data);
+  const { name, price, quantity, comments } = result.data;
+  categoryId = result.data.categoryId;
+  const purchaseDate = new Date().toISOString().substring(0, 10);
+
+  try {
+    await prisma.expenses.create({
+      data: {
+        name,
+        price,
+        quantity,
+        comments,
+        purchasedate: purchaseDate,
+        categoryid: categoryId,
+      },
+    });
+
+    message = "Expense added";
+    success = true;
+  } catch (error) {
+    success = false;
+    message = "Error adding expense";
+  }
+
+  const items = await prisma.items.findMany({
+    where: {
+      categoryid: categoryId,
+    },
+    select: {
+      name: true,
+    },
+    orderBy: {
+      name: "asc",
+    },
+  });
+
+  items.map((item) => names.push(item.name));
+}
+---
+
+{
+  success ? (
+    <h1 class="p-1 font-semibold text-green-600 my-2 w-80">{message}</h1>
+  ) : (
+    errors.map((error) => (
+      <h1 class="p-1 text-red-600 my-2 w-80">{error.message}</h1>
+    ))
+  )
+}
+
+{
+  success ? (
+    <form method="POST" id="expenseFrom" class="space-y-1 mt-2">
+      <input
+        type="text"
+        name="categoryId"
+        id="categoryId"
+        value={`${categoryId}`}
+        hidden
+      />
+      <div class="flex space-x-4">
+        <label for="name" class="p-1 font-bold w-20">
+          Name
+        </label>
+        <select
+          name="name"
+          id="name"
+          class="p-1 focus:outline-none border-2 border-zinc-700"
+        >
+          {names.map((name) => (
+            <option value={name}>{name}</option>
+          ))}
+        </select>
+      </div>
+      <div class="flex space-x-4 pt-2">
+        <label for="quantity" class="p-1 font-bold w-20">
+          Quantity
+        </label>
+        <input
+          type="text"
+          name="quantity"
+          id="quantity"
+          class="p-1 focus:outline-none border-2 border-zinc-700"
+          hx-post="/validate/quantity"
+          hx-target="#quantity-error"
+        />
+      </div>
+      <div id="quantity-error" class="p-1" />
+      <div class="flex space-x-4 pt-2">
+        <label for="price" class="p-1 font-bold w-20">
+          Price
+        </label>
+        <input
+          type="number"
+          step="0.1"
+          name="price"
+          id="price"
+          class="p-1 focus:outline-none border-2 border-zinc-700"
+          hx-post="/validate/price"
+          hx-target="#price-error"
+        />
+      </div>
+      <div id="price-error" class="p-1" />
+      <div class="flex space-x-4 pb-2">
+        <label for="comments" class="p-1 font-bold w-20">
+          Comments
+        </label>
+        <input
+          type="text"
+          name="comments"
+          id="comments"
+          class="p-1 focus:outline-none border-2 border-zinc-700"
+        />
+      </div>
+      <button
+        type="submit"
+        hx-post="/addExpense"
+        hx-target="#expenseFrom"
+        class="px-2 py-1 bg-black text-white"
+      >
+        Submit
+      </button>
+    </form>
+  ) : (
+    <form method="POST" id="expenseFrom" class="space-y-1 mt-2">
+      <input
+        type="text"
+        name="categoryId"
+        id="categoryId"
+        value={(data?.categoryId as string) || ""}
+        hidden
+      />
+      <div class="flex space-x-4">
+        <label for="name" class="p-1 font-bold w-20">
+          Name
+        </label>
+        <input
+          type="text"
+          name="name"
+          id="name"
+          class="p-1 focus:outline-none border-2 border-zinc-700"
+          value={(data?.name as string) || ""}
+        />
+      </div>
+      <div class="flex space-x-4 pt-2">
+        <label for="quantity" class="p-1 font-bold w-20">
+          Quantity
+        </label>
+        <input
+          type="text"
+          name="quantity"
+          id="quantity"
+          class="p-1 focus:outline-none border-2 border-zinc-700"
+          hx-post="/validate/quantity"
+          hx-target="#quantity-error"
+          value={(data?.quantity as string) || ""}
+        />
+      </div>
+      <div id="quantity-error" class="p-1" />
+      <div class="flex space-x-4 pt-2">
+        <label for="price" class="p-1 font-bold w-20">
+          Price
+        </label>
+        <input
+          type="number"
+          step="0.1"
+          name="price"
+          id="price"
+          class="p-1 focus:outline-none border-2 border-zinc-700"
+          hx-post="/validate/price"
+          hx-target="#price-error"
+          value={(data?.price as string) || ""}
+        />
+      </div>
+      <div id="price-error" class="p-1" />
+      <div class="flex space-x-4 pb-2">
+        <label for="comments" class="p-1 font-bold w-20">
+          Comments
+        </label>
+        <input
+          type="text"
+          name="comments"
+          id="comments"
+          class="p-1 focus:outline-none border-2 border-zinc-700"
+          value={(data?.comments as string) || ""}
+        />
+      </div>
+      <button
+        type="submit"
+        hx-post="/addExpense"
+        hx-target="#expenseFrom"
+        class="px-2 py-1 bg-black text-white"
+      >
+        Submit
+      </button>
+    </form>
+  )
+}
